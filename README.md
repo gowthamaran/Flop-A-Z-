@@ -188,6 +188,9 @@ sudo apt-get install -y python3-venv python3-pip   # or python3.14-venv for Pyth
 rm -rf .venv && python3 flop_setup.py
 ```
 
+**`npx: missing` / "Could not run the flop CLI" although Node 22 is installed.**
+Debian/Ubuntu's apt `nodejs` package ships without npm/npx. Since v1.0.3 the tool installs `npm` with apt automatically (or a complete per-user Node 22 via nvm) and prints the real error if the CLI still fails. Manual fix: `apt-get install -y npm`.
+
 **Something failed halfway.** Re-running is safe: finished steps are skipped and existing keystores are never overwritten. Details are in `~/.flop-az/logs/` (secrets are redacted).
 
 **`hermes: command not found` right after installing.** Open a new shell (or `source ~/.bashrc`), then pick "Setup Hermes Agent" again.

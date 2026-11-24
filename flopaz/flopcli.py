@@ -15,11 +15,24 @@ from . import config, system, ui
 
 
 def base_cmd() -> list[str]:
-    """Prefer a global `flop`; otherwise run the pinned package through npx."""
+    """Prefer a global `flop`; otherwise run the pinned package via npx (or `npm exec`)."""
+    system.discover_node_paths()
     if system.which("flop"):
         return ["flop"]
     c = config.load()["flop_cli"]
-    return ["npx", "--yes", "--package", f"{c['package']}@{c['version']}", "flop"]
+    pkg = f"{c['package']}@{c['version']}"
+    if system.which("npx"):
+        return ["npx", "--yes", "--package", pkg, "flop"]
+    if system.which("npm"):
+        return ["npm", "exec", "--yes", "--package", pkg, "--", "flop"]
+    return ["npx", "--yes", "--package", pkg, "flop"]  # fails with a clear "not found"
+
+
+def last_error() -> str:
+    """Last few meaningful output lines of `flop --version`, for error messages."""
+    rc, out = system.capture([*base_cmd(), "--version"], timeout=180)
+    lines = [l for l in out.splitlines() if l.strip() and "npm warn" not in l.lower()]
+    return "\n".join(lines[-6:]) if rc != 0 else ""
 
 
 GLOBAL_WITH_VALUE = {"--network", "--rpc", "--signer", "--keystore", "--password-env", "--output"}

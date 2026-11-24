@@ -77,8 +77,16 @@ def _cli() -> bool:
     c = config.load()["flop_cli"]
     ui.info(f"Using {c['package']}@{c['version']} (pinned). First run downloads it via npx.")
     v = flopcli.version()
+    if not v and not system.node_ready():
+        system.install_node()  # repair npm/npx and retry once
+        v = flopcli.version()
     if not v:
-        ui.err("Could not run the flop CLI. Check Node 22+ and network access to registry.npmjs.org.")
+        ui.err("Could not run the flop CLI.")
+        detail = flopcli.last_error()
+        if detail:
+            ui.console.print(detail, markup=False, highlight=False, style="red")
+        ui.info("Needs Node 22+ with npm/npx, and network access to registry.npmjs.org.")
+        ui.info("Manual fix (Debian/Ubuntu):  apt-get install -y npm   then pick this option again.")
         return False
     ui.ok(f"flop CLI {v}")
     return True

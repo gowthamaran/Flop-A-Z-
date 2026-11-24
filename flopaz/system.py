@@ -196,28 +196,80 @@ def install_basic_tools(names: list[str]) -> None:
         run([*sudo, "apt-get", "install", "-y", *missing], check=False)
 
 
-def install_node() -> None:
-    if node_major() >= 22:
+def node_ready() -> bool:
+    """Node 22+ AND its npm/npx tools (Debian/Ubuntu's apt `nodejs` ships without npm)."""
+    return node_major() >= 22 and bool(which("npx")) and bool(which("npm"))
+
+
+def discover_node_paths() -> None:
+    """Put an existing Node 22+ (nvm or /usr/local) with npx on PATH for this session."""
+    if node_ready():
         return
-    ui.warn("Node.js 22+ is required.")
+    nvm_dir = Path(os.environ.get("NVM_DIR", Path.home() / ".nvm"))
+    candidates = sorted((nvm_dir / "versions" / "node").glob("v2[2-9]*/bin"), reverse=True)
+    candidates += [Path("/usr/local/bin"), Path("/opt/nodejs/bin")]
+    for b in candidates:
+        if (b / "node").exists() and (b / "npx").exists():
+            os.environ["PATH"] = f"{b}{os.pathsep}{os.environ['PATH']}"
+            if node_ready():
+                ui.ok(f"Using Node {version_of('node')} from {b}")
+                return
+            os.environ["PATH"] = os.environ["PATH"].split(os.pathsep, 1)[1]
+
+
+def _apt_install_npm() -> bool:
+    """Node came from apt without npm: install the matching npm package."""
+    if not which("apt-get"):
+        return False
+    sudo = [] if os.geteuid() == 0 else ["sudo"]
+    if not ui.confirm("Node.js is installed but npm/npx are missing. Install npm with apt-get?",
+                      default=True):
+        return False
+    run([*sudo, "apt-get", "update", "-qq"], check=False)
+    run([*sudo, "apt-get", "install", "-y", "npm"], check=False)
+    return node_ready()
+
+
+def _nvm_install_node() -> bool:
+    """Per-user Node 22 (with npm + npx) via the official nvm installer. No sudo needed."""
     nvm_dir = Path(os.environ.get("NVM_DIR", Path.home() / ".nvm"))
     if not (nvm_dir / "nvm.sh").exists():
         url = "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh"
-        ui.info(f"Node can be installed per-user with nvm ({url}). No sudo needed.")
+        ui.info(f"Installing Node 22 per-user with nvm ({url}). No sudo needed.")
         if not ui.confirm("Install nvm + Node 22 now?", default=True):
-            ui.info("Install Node 22 yourself: https://nodejs.org/en/download")
-            return
+            return False
         try:
             script = download(url, ui.HOME_DIR / "nvm-install.sh")
         except Exception as e:
-            ui.err(f"Could not download nvm: {e}. Install Node 22 from https://nodejs.org/en/download")
-            return
+            ui.err(f"Could not download nvm: {e}")
+            return False
         run(["bash", str(script)], check=False)
-    run(["bash", "-c", f'. "{nvm_dir}/nvm.sh" && nvm install 22 && nvm alias default 22'], check=False)
-    node_bin = sorted((nvm_dir / "versions" / "node").glob("v22*/bin"))
-    if node_bin:
-        os.environ["PATH"] = f"{node_bin[-1]}{os.pathsep}{os.environ['PATH']}"
-        ui.ok(f"Node {version_of('node')} active for this session. Open a new shell to keep it.")
+    run(["bash", "-c", f'export NVM_DIR="{nvm_dir}"; . "$NVM_DIR/nvm.sh" && nvm install 22 '
+                       f'&& nvm alias default 22'], check=False)
+    discover_node_paths()
+    return node_ready()
+
+
+def install_node() -> None:
+    """Make sure node 22+, npm and npx all work, fixing whatever is missing."""
+    discover_node_paths()
+    if node_ready():
+        return
+    if node_major() >= 22:
+        ui.warn(f"Node {version_of('node')} found, but npm/npx are missing "
+                "(common with the Debian/Ubuntu apt `nodejs` package).")
+        if _apt_install_npm():
+            ui.ok(f"npm {version_of('npm')} / npx {version_of('npx')} installed")
+            return
+        ui.info("Falling back to a complete per-user Node 22 (includes npm + npx).")
+    else:
+        ui.warn(f"Node.js 22+ is required (found: {version_of('node') or 'none'}).")
+    if _nvm_install_node():
+        ui.ok(f"Node {version_of('node')} with npx {version_of('npx')} active. "
+              "New shells pick it up automatically.")
+    else:
+        ui.err("Could not set up Node 22 with npm/npx. Fix manually, then re-run:\n"
+               "  Debian/Ubuntu: apt-get install -y npm   (or install Node 22 from https://nodejs.org)")
 
 
 def install_pnpm() -> None:
