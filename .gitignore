@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Never commit secrets or keys
+*.env
+.env*
+keys/
+*keystore*.json
+agent-*.json
+*.seed
+*.mnemonic
+da-peers.json
+
+# Local state / downloads
+.flop-az/
+flop-validator/
+*.tar.gz
+*.log
+.DS_Store

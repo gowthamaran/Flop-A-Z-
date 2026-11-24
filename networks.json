@@ -1,0 +1,63 @@
+{
+  "_comment": "FLOP A-Z network profiles. Values marked verified=false come from community briefings, not the official docs page. The tool checks them against the live chain before any step that depends on them. Update this file when docs.flop.network publishes verified values.",
+  "testnet": {
+    "label": "FLOP Testnet",
+    "rpc_ws": "wss://testnet.flop.network/",
+    "rpc_http": "https://testnet.flop.network/",
+    "expected_genesis": "0x918abd58fb16306b30ef3886514cfaebffecb4de43e82b6f8ec4795c43cfd800",
+    "verified": false,
+    "_verified_note": "RPC URL matches the testnet profile built into @flop-labs/cli 0.7.0. Genesis hash is from the community brief; the docs page still lists it as unverified.",
+    "faucet": "https://faucet.testnet.flop.network",
+    "gateway": "https://gateway.testnet.flop.network",
+    "explorer": "https://testnet.flopscan.io/",
+    "docs": "https://docs.flop.network/networks/testnet",
+    "validator_package": null
+  },
+  "devnet": {
+    "label": "FLOP Devnet (practice only, zero airdrop weight)",
+    "rpc_ws": "wss://rpc.devnet.flop.network/",
+    "rpc_http": "https://rpc.devnet.flop.network",
+    "expected_genesis": "0x99c172c095340ace980631f9123544c6bebd4839f3437e463533422d8be2d631",
+    "verified": true,
+    "explorer": "https://explorer.devnet.flop.network/",
+    "docs": "https://docs.flop.network/docs/run-validator",
+    "validator_package": {
+      "release": "0.4.1-devnet.1",
+      "url": "https://explorer.devnet.flop.network/validator-downloads/validator-cs-be91fe83-0.4.1-devnet.1.tar.gz",
+      "sha256": "715abad72f3a8c658de5f929c6fe01b03d4204b5954925331766053610f3c967"
+    }
+  },
+  "flop_cli": {
+    "package": "@flop-labs/cli",
+    "version": "0.7.0",
+    "mcp_url": "https://mcp.flop.network/mcp",
+    "password_env": "FLOP_KEYSTORE_PASSWORD",
+    "_comment": "Command templates taken from `flop --help` of @flop-labs/cli 0.7.0. Each template is re-checked against the installed CLI's --help before it runs, so a future CLI change fails safely. Edit here if your CLI version differs.",
+    "commands": {
+      "keys_generate": "flop --offline keys generate --type sr25519 --name flop-az-agent --out {keystore} --password-env FLOP_KEYSTORE_PASSWORD",
+      "keys_inspect": "flop --offline keys inspect {keystore} --json",
+      "network_status": "flop --network {network} network status",
+      "faucet": "flop --network {network} faucet request {address}",
+      "balance": "flop --network {network} balance {address}",
+      "agent_init": "flop --network {network} agent init --client generic",
+      "agent_doctor": "flop --network {network} agent doctor --check-rpc",
+      "infer": "flop --network {network} --keystore {keystore} --password-env FLOP_KEYSTORE_PASSWORD chat --max-flop {max_spend} {prompt}",
+      "hermes_plan": "flop --network {network} --keystore {keystore} --password-env FLOP_KEYSTORE_PASSWORD hermes direct --terminal --max-flop {max_spend} --budget-flop {budget} --state {state} --dry-run",
+      "hermes_launch": "flop --network {network} --keystore {keystore} --password-env FLOP_KEYSTORE_PASSWORD hermes direct --terminal --max-flop {max_spend} --budget-flop {budget} --state {state}",
+      "validator_init": "flop --network {network} validator init",
+      "validator_doctor": "flop --network {network} --rpc {rpc} validator doctor",
+      "validator_status": "flop --network {network} validator status {address}",
+      "health": "flop --network {network} --rpc {rpc} health"
+    }
+  },
+  "registration": {
+    "operator_form": "https://github.com/flop-labs/network/issues/new?template=operator-application.yml",
+    "validator_prep_kit": "https://docs.flop.network/testnet-validator-prep/",
+    "validator_interest": "https://flop.finance/apply/validator",
+    "miner_interest": "https://flop.finance/apply/miner"
+  },
+  "hermes": {
+    "installer": "https://hermes-agent.nousresearch.com/install.sh",
+    "docs": "https://hermes-agent.nousresearch.com/"
+  }
+}
