@@ -90,9 +90,18 @@ def password_env(var: str | None = None) -> dict:
     var = var or config.load()["flop_cli"].get("password_env", "FLOP_KEYSTORE_PASSWORD")
     """Ask for the keystore password without echo and pass it only via env to the CLI."""
     if os.environ.get(var):
-        ui.ok(f"Using keystore password from ${var}")
         return {}
+    if var in _PW_CACHE:  # asked once per run, kept in memory only
+        return {var: _PW_CACHE[var]}
     import getpass
-    ui.info(f"The password is passed to the flop CLI as ${var}. It is never logged or stored.")
-    pw = getpass.getpass("Keystore password: ")
+    ui.info(f"The password is passed to the flop CLI as ${var}. It is never logged or stored on disk.")
+    while True:
+        pw = getpass.getpass("Keystore password (min 8 chars): ")
+        if len(pw) >= 8:
+            break
+        ui.warn("Too short — use at least 8 characters.")
+    _PW_CACHE[var] = pw
     return {var: pw}
+
+
+_PW_CACHE: dict = {}

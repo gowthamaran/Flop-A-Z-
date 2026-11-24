@@ -207,7 +207,11 @@ def install_node() -> None:
         if not ui.confirm("Install nvm + Node 22 now?", default=True):
             ui.info("Install Node 22 yourself: https://nodejs.org/en/download")
             return
-        script = download(url, Path.home() / ".flop-az" / "nvm-install.sh")
+        try:
+            script = download(url, ui.HOME_DIR / "nvm-install.sh")
+        except Exception as e:
+            ui.err(f"Could not download nvm: {e}. Install Node 22 from https://nodejs.org/en/download")
+            return
         run(["bash", str(script)], check=False)
     run(["bash", "-c", f'. "{nvm_dir}/nvm.sh" && nvm install 22 && nvm alias default 22'], check=False)
     node_bin = sorted((nvm_dir / "versions" / "node").glob("v22*/bin"))

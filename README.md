@@ -178,6 +178,20 @@ Validators should run on the host, because they manage Docker themselves.
 
 Python 3.9+. Linux or macOS (Windows works under WSL2). Everything else is checked and, where safe, installed with your confirmation.
 
+## 🧰 Troubleshooting
+
+**`No module named pip` / `ensurepip is not available` on Debian/Ubuntu.**
+Debian and Ubuntu ship Python's venv support as a separate package. Since v1.0.1 the tool fixes this automatically: it removes the broken `.venv`, installs `pythonX.Y-venv` with apt (after asking), and falls back to installing pip from its official PyPI wheel. If it still can't, run this and re-run the tool:
+
+```bash
+sudo apt-get install -y python3-venv python3-pip   # or python3.14-venv for Python 3.14
+rm -rf .venv && python3 flop_setup.py
+```
+
+**Something failed halfway.** Re-running is safe: finished steps are skipped and existing keystores are never overwritten. Details are in `~/.flop-az/logs/` (secrets are redacted).
+
+**`hermes: command not found` right after installing.** Open a new shell (or `source ~/.bashrc`), then pick "Setup Hermes Agent" again.
+
 ## License
 
 MIT © MARAN — see [LICENSE](LICENSE).

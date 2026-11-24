@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -91,7 +92,7 @@ def _keystore(netname: str, state: dict) -> None:
     if ks.exists():
         ui.ok(f"Keystore exists: {ks} (left untouched)")
         if ui.confirm("Generate a NEW keystore anyway? (old one is kept as a backup)"):
-            backup = ks.with_suffix(f".bak-{dt.datetime.now():%Y%m%d%H%M%S}.json")
+            backup = ks.with_name(f"{ks.stem}.bak-{dt.datetime.now():%Y%m%d%H%M%S}.json")
             shutil.move(str(ks), backup)
             ui.ok(f"Old keystore moved to {backup}")
     if not ks.exists():
@@ -139,17 +140,22 @@ def _install_hermes() -> bool:
     if not ui.confirm("Download the installer and show its checksum first?", default=True):
         ui.info(f"Manual install: curl -fsSL {url} | bash")
         return False
-    script = system.download(url, ui.HOME_DIR / "hermes-install.sh")
+    try:
+        script = system.download(url, ui.HOME_DIR / "hermes-install.sh")
+    except Exception as e:
+        ui.err(f"Could not download the Hermes installer: {e}")
+        ui.info(f"Install manually, then re-run this step: curl -fsSL {url} | bash")
+        return False
     if not system.DRY_RUN:
         ui.info(f"SHA-256: {system.sha256(script)}  ({script})")
-        if ui.confirm("View the script before running it?", default=True):
-            ui.console.print(script.read_text()[:4000], markup=False, highlight=False)
+        if ui.confirm("View the script before running it?", default=False):
+            ui.console.print(script.read_text(), markup=False, highlight=False)
     if not ui.confirm("Run the Hermes installer now?", default=True):
         return False
     system.run(["bash", str(script)], check=False)
-    for p in (Path.home() / ".local" / "bin", Path.home() / ".hermes" / "bin"):
+    for p in (Path.home() / ".local" / "bin", Path.home() / ".hermes" / "bin",
+              Path.home() / ".hermes" / "hermes-agent" / "venv" / "bin"):
         if (p / "hermes").exists():
-            import os
             os.environ["PATH"] = f"{p}{os.pathsep}{os.environ['PATH']}"
     if system.which("hermes"):
         ui.ok("Hermes installed. Run `hermes setup` later to pick your chat model provider.")
@@ -213,7 +219,7 @@ def _configure_hermes(netname: str, state: dict) -> None:
     elif ui.confirm(f"Add the FLOP MCP server ({c['mcp_url']}) to {HERMES_CONFIG}?", default=False):
         HERMES_CONFIG.parent.mkdir(parents=True, exist_ok=True)
         if HERMES_CONFIG.exists():
-            backup = HERMES_CONFIG.with_suffix(f".yaml.bak-{dt.datetime.now():%Y%m%d%H%M%S}")
+            backup = HERMES_CONFIG.with_name(f"config.yaml.bak-{dt.datetime.now():%Y%m%d%H%M%S}")
             shutil.copy2(HERMES_CONFIG, backup)
             ui.ok(f"Backup: {backup}")
         with HERMES_CONFIG.open("a", encoding="utf-8") as fh:

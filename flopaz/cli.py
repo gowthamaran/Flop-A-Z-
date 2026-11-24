@@ -45,6 +45,19 @@ def pick_network(given: str | None) -> str:
 
 
 def dispatch(cmd: str, netname: str, args: argparse.Namespace) -> None:
+    """Run one path; an unexpected error is reported cleanly instead of killing the tool."""
+    try:
+        _dispatch(cmd, netname, args)
+    except KeyboardInterrupt:
+        raise
+    except Exception as e:  # noqa: BLE001
+        import traceback
+        ui.log("TRACE", traceback.format_exc())
+        ui.err(f"{cmd} stopped: {type(e).__name__}: {e}")
+        ui.info(f"Details were saved to {ui.LOG_DIR}. Re-running is safe — finished steps are skipped.")
+
+
+def _dispatch(cmd: str, netname: str, args: argparse.Namespace) -> None:
     if cmd == "validator":
         validator.setup(netname)
     elif cmd == "agent":

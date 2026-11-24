@@ -96,13 +96,25 @@ def table(title: str, rows: list[tuple], headers: tuple) -> None:
 
 # ---------------------------------------------------------------- prompts
 
+def _input(prompt: str) -> str | None:
+    """console.input that returns None at end-of-input instead of raising."""
+    try:
+        return console.input(prompt)
+    except EOFError:
+        console.print()
+        return None
+
+
 def select(message: str, choices: list[str]) -> str | None:
     if questionary and sys.stdin.isatty():
         return questionary.select(message, choices=choices).ask()
     for i, c in enumerate(choices, 1):
         console.print(f"  {i}. {c}")
     while True:
-        raw = console.input(f"{message} [1-{len(choices)}]: ").strip()
+        raw = _input(f"{message} [1-{len(choices)}]: ")
+        if raw is None:
+            return None
+        raw = raw.strip()
         if raw.isdigit() and 1 <= int(raw) <= len(choices):
             return choices[int(raw) - 1]
         if raw == "" or raw.lower() in {"q", "quit", "exit"}:
@@ -116,7 +128,7 @@ def confirm(message: str, default: bool = False) -> bool:
         ans = questionary.confirm(message, default=default).ask()
         return bool(ans)
     suffix = "[Y/n]" if default else "[y/N]"
-    raw = console.input(f"{message} {suffix} ").strip().lower()
+    raw = (_input(f"{message} {suffix} ") or "").strip().lower()
     return default if raw == "" else raw in {"y", "yes"}
 
 
@@ -126,7 +138,7 @@ def ask(message: str, default: str = "") -> str:
     if questionary and sys.stdin.isatty():
         ans = questionary.text(message, default=default).ask()
         return (ans or "").strip()
-    raw = console.input(f"{message} [{default}]: ").strip()
+    raw = (_input(f"{message} [{default}]: ") or "").strip()
     return raw or default
 
 
