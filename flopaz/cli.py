@@ -11,8 +11,8 @@ EPILOG = f"Made by {AUTHOR} | {AUTHOR_X}"
 
 MENU = {
     "🛡  Setup Validator (CPU-only node)": "validator",
-    "🤖 Setup Hermes Agent (farm as agent)": "agent",
-    "🚀 Launch Hermes on FLOP (agent)": "hermes",
+    "🤖 Setup Hermes Agent (start here to farm as agent)": "agent",
+    "🚀 Launch Hermes on FLOP (runs setup first if needed)": "hermes",
     "💸 Run capped inference spend (agent)": "spend",
     "⛏  Setup Miner (optional, needs NVIDIA GPU)": "miner",
     "🩺 Check status / doctor": "doctor",

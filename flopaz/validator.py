@@ -131,7 +131,7 @@ def _registration(netname: str) -> None:
 
 def _monitoring(netname: str) -> None:
     ui.step("7 · Monitoring")
-    ui.code(f"python flop_setup.py doctor --network {netname}")
+    ui.code(f"python3 flop_setup.py doctor --network {netname}")
     ui.code(f"flop --network {netname} --rpc ws://127.0.0.1:9944 health")
     ui.code(f"flop --network {netname} --rpc ws://127.0.0.1:9944 validator doctor")
     ui.code(f"flop --network {netname} validator status <YOUR_PUBLIC_SS58>")
@@ -161,7 +161,7 @@ def setup(netname: str) -> None:
         ui.warn("Docker Engine + Compose plugin are required: https://docs.docker.com/engine/install/")
     ready = system.show_checks("Validator host", system.validator_checks())
     if not ready and not ui.confirm("Some required checks failed. Continue anyway (practice host)?"):
-        ui.info("Fix the items above and re-run: python flop_setup.py validator")
+        ui.info("Fix the items above and re-run: python3 flop_setup.py validator")
         return
 
     rpc.verify_genesis(net, netname)

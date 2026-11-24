@@ -187,7 +187,7 @@ def _configure_hermes(netname: str, state: dict) -> None:
         ui.info("Dry run first — prints the payer and budget plan without spending:")
         flopcli.run_template("hermes_plan", env=env, **_hermes_args(netname, state))
         ui.info("Launch any time with:")
-        ui.code(f"python flop_setup.py hermes --network {netname}")
+        ui.code(f"python3 flop_setup.py hermes --network {netname}")
     else:
         ui.warn("No keystore yet, so `flop hermes direct` can't run. Finish step 3 first.")
 
@@ -247,8 +247,37 @@ def _limits(state: dict) -> None:
 
 # ---------------------------------------------------------------- spend loop
 
+def ensure_ready(netname: str, purpose: str, need_hermes: bool = False) -> bool:
+    """Make sure the agent is set up before an action that needs it.
+
+    If the keystore is missing, run the full agent setup right here instead of
+    stopping, then come back and continue the action the user picked.
+    """
+    if not keystore_path(netname).exists():
+        ui.warn(f"To {purpose} you first need a {netname} wallet (keystore) with test FLOP.")
+        ui.info("I'll run the Hermes Agent setup now: wallet → faucet → limits → Hermes. "
+                "It takes a few minutes and is safe to re-run.")
+        if not ui.confirm("Run the setup now?", default=True):
+            ui.info(f"Later: choose 'Setup Hermes Agent' in the menu, or run "
+                    f"python3 flop_setup.py agent --network {netname}")
+            return False
+        setup(netname, offer_launch=False)
+        if not keystore_path(netname).exists():
+            ui.err("The wallet wasn't created, so I can't continue. Check the messages above "
+                   f"(log: {ui.LOG_DIR}), fix them, and pick this option again.")
+            return False
+        ui.ok(f"Setup done — continuing to {purpose}.")
+    if need_hermes and not system.which("hermes"):
+        ui.warn("Hermes Agent isn't installed yet.")
+        if not _install_hermes():
+            return False
+    return True
+
+
 def spend(netname: str, sessions: int) -> None:
     """Run capped inference sessions with test FLOP. The task content does not matter."""
+    if not ensure_ready(netname, "run inference sessions"):
+        return
     state = load_state()
     lim = state["limits"]
     today = dt.date.today().isoformat()
@@ -259,9 +288,6 @@ def spend(netname: str, sessions: int) -> None:
         return
     n = min(sessions, allowed)
     ks = keystore_path(netname)
-    if not ks.exists():
-        ui.err(f"No keystore at {ks}. Run: python flop_setup.py agent --network {netname}")
-        return
     env = flopcli.password_env()
     ui.step(f"Running {n} inference session(s) on {netname} (≤ {lim['max_spend_per_session']} FLOP each)")
     for i in range(n):
@@ -278,10 +304,9 @@ def spend(netname: str, sessions: int) -> None:
 
 def launch_hermes(netname: str) -> None:
     """Start Hermes in the terminal, paying for inference with test FLOP under the saved caps."""
-    state = load_state()
-    if not keystore_path(netname).exists():
-        ui.err(f"No keystore. Run: python flop_setup.py agent --network {netname}")
+    if not ensure_ready(netname, "launch Hermes on FLOP", need_hermes=True):
         return
+    state = load_state()
     lim = state["limits"]
     ui.step(f"Hermes on FLOP {netname} · ≤ {lim['max_spend_per_session']} FLOP/completion · "
             f"budget {lim['hermes_budget_flop']} FLOP")
@@ -291,7 +316,7 @@ def launch_hermes(netname: str) -> None:
 
 # ---------------------------------------------------------------- entry
 
-def setup(netname: str) -> None:
+def setup(netname: str, offer_launch: bool = True) -> None:
     net = config.network(netname)
     ui.step(f"Hermes Agent setup · {net['label']}")
     ui.info("Agents earn by spending faucet test FLOP on settled inference. Holding tokens earns nothing.")
@@ -307,9 +332,17 @@ def setup(netname: str) -> None:
     if _install_hermes():
         _configure_hermes(netname, state)
 
+    if not keystore_path(netname).exists():
+        ui.warn("No wallet was created, so the agent isn't ready yet. Fix the errors above and "
+                "run 'Setup Hermes Agent' again — finished steps are skipped.")
+        return
+
     ui.step("Next")
-    ui.code(f"python flop_setup.py hermes --network {netname}               # launch Hermes on FLOP")
-    ui.code(f"python flop_setup.py spend --network {netname} --sessions 3   # capped inference spend")
-    ui.code(f"python flop_setup.py doctor --network {netname}")
+    ui.code(f"python3 flop_setup.py hermes --network {netname}               # launch Hermes on FLOP")
+    ui.code(f"python3 flop_setup.py spend --network {netname} --sessions 3   # capped inference spend")
+    ui.code(f"python3 flop_setup.py doctor --network {netname}")
     ui.info(f"Explorer: {net['explorer']}")
     ui.ok("Hermes Agent path complete.")
+    if offer_launch and system.which("hermes") and \
+            ui.confirm("Launch Hermes on FLOP now?", default=True):
+        launch_hermes(netname)
