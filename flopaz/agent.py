@@ -330,7 +330,9 @@ def setup(netname: str, offer_launch: bool = True) -> None:
     ui.info("Agents earn by spending faucet test FLOP on settled inference. Holding tokens earns nothing.")
     if not _prereqs() and not ui.confirm("Some required checks failed. Continue anyway?"):
         return
-    rpc.verify_genesis(net, netname)
+    if not rpc.verify_genesis(net, netname):
+        ui.err(f"{netname}: refusing to continue agent setup because genesis verification failed.")
+        return
     if not _cli():
         return
     state = load_state()
